@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPFS Music Player</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0a0a0a;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .player-container {
+      width: 700px;
+      background: #121212;
+      border: 1px solid #0ff3;
+      border-radius: 16px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+      overflow: hidden;
+    }
+    .player-header {
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #0ff;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .track-info {
+      padding: 1rem;
+      text-align: center;
+    }
+    .track-info h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+      color: #fff;
+    }
+    .track-info p {
+      font-size: 1rem;
+      color: #aaa;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem;
+      border-top: 1px solid #1e1e1e;
+    }
+    .btn {
+      background: transparent;
+      border: none;
+      color: #0ff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .btn:hover {
+      color: #fff;
+      transform: scale(1.2);
+    }
+    .progress-container {
+      width: 100%;
+      height: 4px;
+      background: #1a1a1a;
+      cursor: pointer;
+    }
+    .progress {
+      height: 100%;
+      width: 0%;
+      background: #0ff;
+      transition: width 0.2s ease;
+    }
+    .song-list {
+      border-top: 1px solid #1e1e1e;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .song-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .song-item:hover {
+      background: rgba(0, 255, 255, 0.1);
+    }
+    .list-controls {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-top: 1px solid #1e1e1e;
+      background: #0f0f0f;
+    }
+    .list-controls button {
+      background: none;
+      border: none;
+      color: #0ff;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s;
+    }
+    .list-controls button:hover {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="player-container">
+    <div class="player-header">IPFS Player</div>
+    <div class="track-info">
+      <h2 id="trackTitle">Track Title</h2>
+      <p id="trackArtist">Artist Name</p>
+    </div>
+    <div class="progress-container" onclick="seekTrack(event)">
+      <div class="progress" id="progress"></div>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="prevTrack()">⏮</button>
+      <button class="btn" onclick="togglePlay()" id="playPauseBtn">▶</button>
+      <button class="btn" onclick="nextTrack()">⏭</button>
+    </div>
+    <div class="list-controls">
+      <button onclick="shuffleTracks()">Shuffle</button>
+      <button onclick="sortByArtist()">Sort by Artist</button>
+    </div>
+    <div class="song-list" id="trackList"></div>
+  </div>
+
+  <script>
+ let tracks = [
+      { link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQhDHWoqxP66jG6nzhudn78stbyFiAoN1SUve7LkqkHBC", artist: "$", track: "BURN" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWCaeaRzu7Bu1PF5WGKtr3nKWe4bDD5RxjQwuHNGWVHmR", artist: "$", track: "CARNIVAL" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXm4hY4EfB38G8bf41ErybA5JvvEhBAQfFrYa2oXw5xgr", artist: "$", track: "TALKING" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXQuEQx7xV27KdSdCpbVbeoNUddmqSTSEJ9XwDMkkF3oE", artist: "1nonly", track: "Ash Kaashh" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYAkig7h16uB8Cnojxf5ojphuTMd7mwHSfDor2gzo9bGo", artist: "1nonly", track: "Bunny Girl" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZcgDZii13xhNNEpjLwKw1dwvMzcYV8BKL2ptx4wBbAYU", artist: "1nonly", track: "DANCE! (feat. Ciscaux   Wassup Rocker)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaWN4QaRgsVa47oaV53whn9FwDYmtfftJFod9oYnKDCgX", artist: "1nonly", track: "GHOSTKILLA" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcoVGyM3dxpxDicdkTUmJXhbx9X3kMB2MCW81RgoRkhpX", artist: "1nonly", track: "Lovely" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQxtxfXeY4uBy13V17hnkibagXyenKfVkn23uNmwxW7oP", artist: "1nonly", track: "Stay With Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRxdpRhXqFHf4GmqfpK62u693iUeaWo62oqPGGUbk9cjk", artist: "1nonly", track: "Step Back!" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbFYooeoHXYPHFXuFyTPYkKcECXM9AaZ1xp3brC6b8HV3", artist: "21 Savage", track: "Bank Account" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUxWDeLWAJQC1nHsigXMVycShz1YW7SKvSPcmrfF1qR2x", artist: "21 Savage", track: "Glock In My Lap" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUbjBm998yY32ERPwG9EVENQ7VzZzyAdSFqC2msKxztbf", artist: "21 Savage", track: "Runnin" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmcu4pVTnkg6XJDP3jaBpAd43k86NQHdNNReMe12453NVp", artist: "21 Savage", track: "Savage Mode" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWsgXwuKk9zmUjaEKHU7rGHuJdyeRwx6XECM89h9V5Zfn", artist: "21 Savage", track: "X (feat. Future)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmS95J95nrCMkP4Pyn1Si6KRVEhveMKbQfNQ2EY9NYNgwH", artist: "21 Savage", track: "redrum" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUamAY1KRsM78ysayMcogMdhKDfg8YXx639njkcH4Hdah", artist: "24kgoldn", track: "Mood (feat. iann dior)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUg2gdsLJVLDYbeeWuNyfizEyXCBi2tshvb9XFcmBpd8V", artist: "24kgoldn", track: "VALENTINO" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQUDxpkP23kTyczuXNy27fNYnWw6WsDzHqXZQ52bPTTwi", artist: "2Pac", track: "Do For Love" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdThovd6GDzeHNJw8eUi3Cm3KqXR8FeRcfgm9NAostYz7", artist: "999 Freestyle (feat. Juice WRLD)", track: "999 Freestyle (feat. Juice WRLD)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPi81twJUPMt7TDaUDSRWF772tp3fTjdnPL3Kh2ATsgms", artist: "A Boogie wit da Hoodie", track: "Swervin (feat. 6ix9ine)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmd2eeDTV5W7EbcKbudeQ47bW4otozZSwxKsMeUUg4RQeU", artist: "A$AP Rocky", track: "Praise The Lord (Da Shine) (feat. Skepta)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUAgRJi7nq2Sp1UmoQaBYV3WXfzdhx4E4bPGDzs8JHJwg", artist: "A$AP_Rocky", track: "F kin Problems" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQG9Asuh1Ga6xrW9PrRgXWPWf26joSyzA3YCY4T1pdWMF", artist: "ATLXS", track: "PASSO BEM SOLTO (Slowed)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma88aP59ScPJZrqipG7tiQ5Donu5LMJsvBb8q593MKzLH", artist: "Ace Hood", track: "Bugatti" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTnWLuU5hEb4xNFN2Hxty4RhrLLwgcxHyYT92QYFYjVad", artist: "Aitch", track: "Taste (Make It Shake)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeeS96Xd2AMty7629GKUqKSGdwkCW9Mo3EvG3hibnPGrP", artist: "Akon", track: "Smack That" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcMiWeE79iw3NFhH5WtHTqn3Au1tZjGFNpKaK43kmWkJN", artist: "Alan Walker", track: "Darkside" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmS6NcrwBRgsHSr6m1eQXNSy1B3ddLnjj43Ju2kcZNaqay", artist: "Alan Walker", track: "Faded" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmR3GMmdzZdbPFNPxqkQqiDFgPZZwhyex88WNkw2zk9Dgi", artist: "Alexander Rybak", track: "Fairytale" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTzMbeYVmcUGXhG5nqvCwcZ1BEqHfChYNUEc9Lti87Jpb", artist: "Ammy Virk", track: "Qismat" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmd25dZBFxpt9EPe5H3kcJwEvd6kBu17vz8p9nKeVzib8N", artist: "Anthony Gonzalez", track: "Un Poco Loco" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSSaEPaAwZMR3AsfSjriGhwXe7VhPzNu93YXg6Ygtf1DF", artist: "Arizona Zervas", track: "ROXANNE" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPcWphtYspvjU5J1S3ioPMhyM7bFT7uWzGGFRwR2pLzCY", artist: "Armani White", track: "BILLIE EILISH." },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXQHyCLDQtskGvp85GKQBshWx1aU24dQSewR8u5oNn8Ri", artist: "Ayo   Teo", track: "Rolex" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVSMXvTQm4JLJApGXiz5wpwo9hZTWiqwdoQb1sqLeEDKE", artist: "BLACKPINK", track: "Typa Girl" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdJzYBQ9EUtSm2eLHE7LAwVGzZrkR6baMsg5mHJF9zwBD", artist: "Baby Keem", track: "family ties" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRHxKfNnKQJNb32SJNAfNM6awShzrNfv9ESYMKYbWz9tJ", artist: "Bad Bunny", track: "DÁKITI" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWSv2QDHg8GHYuN9oSmcDXtF7zihDPABxvwuRde71WYyB", artist: "Bastille", track: "Happier" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmb92UC9dv5kZ9tAqUrqhdyufxGpMvoV5Z7AkRMxeqx3vt", artist: "Bazanji", track: "King" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmf34VTpMeQc5psLi4g5jgMKFEA1M5rHMu8iqMUXPCXfJ5", artist: "Benny Blanco", track: "Roses" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTaVgh2Eaj7KgXrM1uozj8vyPy6ZE934UQMP8Ye8EA3sS", artist: "Big Sean", track: "Wolves" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmdu37SUPogJ6fkDGRqhTpt6B6pF68hixPi8SFEMtFfyNT", artist: "ByAstral", track: "DO YOU BLEED" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmX1hmc47QsEuUydUjeen53EqWEtRrVoAzRLR8kBQhFtYp", artist: "CJ", track: "Whoopty" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPnid5E7LH6kFAP1SgKQx8vok47yPWFqL2dQfVUcc8zZC", artist: "Central Cee", track: "BAND4BAND" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUDoGDd3BNRLB5JaVyad728aJTpG67cDr3MvGzh8sRLLe", artist: "Central Cee", track: "Day in the Life" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSF9FNHQEJXQDc9LyfAmvzXkJzxBH2b18JxHtaK46QqfB", artist: "Central Cee", track: "Khabib" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmY2XfrcA7anGsS4paTMr7KcBMP61nMuQBnGua4LMmgGbb", artist: "Central Cee", track: "LET GO" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUmcLatSmSibf4cjbF41bmdhc1BNM5EuKVjACvuzxyKLU", artist: "Central Cee", track: "Loading" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVF7ZUDVZwsZbt13W8piS5vwk72kH8HkhRmjKEyVHvxf2", artist: "Central Cee", track: "Obsessed With You" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWZZ9zanfmiGxiLSZrqdERbq7tzJgsqbzf7EJcWr82nTc", artist: "Charlotte Day Wilson", track: "Mountains" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUZSBEVo6FaoaMzVuCmLsFnb28D2uhS1mAsDJhbRpPFWN", artist: "Chezile", track: "Beanie" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaefKexPALH7TRi3BDSXxEtBEVZXKc1kWHBJuMwqPozCG", artist: "Chief Keef", track: "Love Sosa" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWrunnEfzDiwcMDCauSG4DosND9LRnBbrxCq5GN9eZ1WJ", artist: "Chris Brown", track: "No Guidance (feat. Drake)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmP4KN14KzCqjuo5HX8X9kpVUpopQ33PLXzfJJHbMKbFzn", artist: "Chub1na.Ge", track: "ჩუბინა" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYg6DcRJmBmtENaocpAqf9FAwDHsDjXSftsdCfFqBkP7c", artist: "Clean Bandit", track: "Higher (feat. iann dior)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcHF3zAybxYPXsk7HwGeAjynBn7GYRxnL9qDLAP7GF7Mt", artist: "Cochise", track: "Tell Em" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYEcdu5UYQ3Jb8fjXbyLvLgHaBUEm8uem9TzdbzDLNgxv", artist: "DJ Snake", track: "Let Me Love You" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeeWaEnQnhoFjjvPdxoYLZbmtXTxzy9N4zpT45ijWZ6hJ", artist: "DJ Snake", track: "Taki Taki" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYxGihCJYjagvLAwoTiF6NpUkkCWBCbgPt3W7UsUzoUMF", artist: "DaBaby", track: "ROCKSTAR" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmV7PfMF5womYmqzpQP9vqRHwxbh7ApTxa6t9QjGAZdTuV", artist: "Dave", track: "Sprinter" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRFaAVeK4JVpne2hSFWjKciYKoc6tYVcqeQoE2AT4eXpF", artist: "Denzel Curry", track: "Ultimate" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSweLWaVHyxhgfCooQvkgEJ7RByJYVPbeJbKkSjWoNkzz", artist: "Desiigner", track: "Panda" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmd9i9C2dV13v7NkZ276dmQ9gWy8wKYhimTBcjMTttpxzS", artist: "Destroy Lonely", track: "NOSTYLIST" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdTdNZgJC9vAuGDCd3nQaWFwPPKXe393Y33Jn7pikZ3Ab", artist: "Destroy Lonely", track: "if looks could kill" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSprnbwkvfaWs2prjZDtYqVeiKDBAj5QqhkH1tjHFiviN", artist: "Die Lit CD 1 TRACK 10 (128)", track: "Die Lit CD 1 TRACK 10 (128)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma5aFMFTEDeB5uHbnt9neEMnfmnqAuxAEiDW4Wrm8Kwx1", artist: "Divya Kumar", track: "Jee Karda" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdqTqV15Hh7YvtyLztiJbTpC9L3g7kJ8LUVSFTeToU9LG", artist: "Don Toliver", track: "After Party" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWDJpJuznfAyEihDRxTftJK3grE5Kkm5z5VZgrhLJN3G9", artist: "Don Toliver", track: "Bandit" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmf2AaTp1QHbo2m9SqBEXKPf9nCwTJujQ56TCSjTgTtAxt", artist: "Don Toliver", track: "TORE UP" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTFbZhHxhbGudut6Ly5qGkb5Js7cWkUfyeub3vNowjA8q", artist: "Drake", track: "Fair Trade" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXiZnuESRy5KoLa3JPy3b5PaAE6XL9jW2ojjTahDPniQ2", artist: "Drake", track: "Family Matters" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdT9vHsXXWgPrViYLT9HfHCKjozhpiwrPncvKEfj3UEbT", artist: "Drake", track: "First Person Shooter" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZMzq5g7p6gFiGez7F545LrYQnAG2f8HPD7vMsd2niAVq", artist: "Drake", track: "Forever (Album Version Explicit)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmawLycY2jryAX1LfahLdgPNkDsCEeTLKcyCwYx8FMvjS2", artist: "Drake", track: "God s Plan" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmf9E771noQbXquPq3YWNjSGKyPJ7U3VYkvFgp7VHdaKUh", artist: "Drake", track: "Hotline Bling" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeGgZKxLPpfupYjLApVwcE8vVsgScEakBvGFFT6zRergt", artist: "Drake", track: "IDGAF" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZf6hryMtvEvaRSvbD6RnSjiRZHKH2geeAaoxCvLcY4sE", artist: "Drake", track: "Laugh Now Cry Later" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmW7uQgomoRrZRQgzArusD1XsDomvPhqRbyhQsDNn9mwYi", artist: "Drake", track: "No Friends In The Industry" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNVkvrL1tdrq3JJmQUXcxYusWwA2ozNPe2P52y9bGLzeH", artist: "Drake", track: "Nonstop" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUkyMwpnFWG213SExKWpahaa5ja973S6P88rEiGxNnqm3", artist: "Drake", track: "One Dance" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmY1ruRvXs4eM2MNwu4pM9cnH1WGTV6DvshPYynq1fyHwi", artist: "Drake", track: "Push Ups" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSR9762HbtEokgttXZcb4NhJHMjqCbN4xWKGxAYnDtKVh", artist: "Drake", track: "Rich Flex" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQf9FKb77GeWHfvvdRwoYuYd8Aiefqjz8wYNC7UAbV39B", artist: "Drake", track: "Toosie Slide" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qme15FYRZaRhJVGVccD4JNHWFzT1BpgJQKjBLRJNLtwzQp", artist: "Dua Lipa", track: "Levitating (feat. DaBaby)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQqe8CJgSrcH5kpzmcQfUr5d855qo51s9zD3KUatp1pkH", artist: "Ellie Goulding", track: "Hate Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPFKaF5awMmCjzpATXTGVV5bwK2jx6gk1HLY395B7MkSi", artist: "Eminem", track: "Godzilla" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXjqYmfAmSbcUoWb4DS2S94WtWMiLfFb4sXGfGS4LMCny", artist: "Eminem", track: "Guts Over Fear" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVfp9DqfpKRtaBwXQt7PzSvcH7RBT8zV7epPfM4qJqsz1", artist: "Eminem", track: "Lose Yourself" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSimnPEpdCV2cGuFM6Pqmw6BWuNkeFhuWzntcVLN9zWWA", artist: "Eminem", track: "Love The Way You Lie" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdqrmobS5PuTFW9x9Rj3AzfKtCPzfHBj8vRsL6pCJzWJq", artist: "Eminem", track: "Lucky You" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdhuaEYQAjvMjAzFNTv88V94wptWDAcnFg3d63YFLMc2b", artist: "Eminem", track: "Mockingbird" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRxmyg8mZSBxtb9kX1kqVfsSkyWfL7pbzZRw8ScAwGfkw", artist: "Eminem", track: "Not Afraid" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRz4pRAU3PT9WztCRCPyfRwdWDWeKyUkBHfZoVijT9p52", artist: "Eminem", track: "Sing For The Moment" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdED95ZVUBmVLA7urVnKySNULNC8G5SNSeyG5BAmpvn8M", artist: "Eminem", track: "Stan" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qme9JDSZK5GcUSyT49WrAZhiJmrEWGKPrPpud3ASvV16A1", artist: "Eminem", track: "Stronger Than I Was" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcKDs1KRRGwgxqqEbsZF2mntgY3qSCzMWw2rMKZfFWojQ", artist: "Eminem", track: "The Monster" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmP6wFtKPz1Uj1dWaNVx6jggwgoTDXFta9C25Jui2DaAQ3", artist: "Eminem", track: "The Real Slim Shady" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUAK7KNj7ew7qzNxYP8NSRqF9JsxUVFvES9JFEmFQHMnY", artist: "Eminem", track: "Till I Collapse" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXshTXCAthHEPChXMHQiQtCNDUSswPLqCHEz219wC9fuG", artist: "Eminem", track: "When I m Gone" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdMaYPgLiATBvNaamERRwnriHbwwhnPnYgZGUKJUqQrJs", artist: "Farruko", track: "On My Way" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVrmyzzcmiDXckPgyZVm2oznaZdGz6iMMp2KgaZVAdEsT", artist: "Fetty Wap", track: "Trap Queen" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNpcABdFp3buZ8rbjiTBTLKX3XCdor9u4aLTHczvkN7dP", artist: "Frank Ocean", track: "Chanel" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmT7yBP7pkFsT5AMowLRpC79nSjTR5CL4RkxJvDoeP8zuo", artist: "Frank Ocean", track: "In My Room" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUinDysZ1DWqRatzkQQGQvdA1FhrRijSvFnvvid5FQLBv", artist: "Frank Ocean", track: "Thinkin Bout You" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUzGAxmHrPv4ZTGR9s5yVX4KgGovMFpaaTRVdo1CfCan2", artist: "French Montana", track: "Unforgettable (feat. Swae Lee)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZEzsijEjJ9UqxrWKZDv7DNsFE6cJZnom6ZzGfDikGeDB", artist: "Future", track: "Fine China" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPHRNWrmPbz7duQVos7cp1GvB3vRf5kn5SCb6pUHHV1qq", artist: "Future", track: "Life Is Good (feat. Drake)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUmjMV8RPLEVKoFswHKvgXjRFk9fn2YAJgZ1XyZCT1ihB", artist: "Future", track: "Like That" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmY672WMZee8MuheyRhdXyt8HVdis76YVS7YEkxbdHnyeX", artist: "Future", track: "Low Life (feat. The Weeknd)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmShLggNBVpngCvXPAWybMnVHH6C4wcUcEnjwTbonAmZX4", artist: "Future", track: "Mask Off" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbCmYL4ryWKgfcYydetTh9NsjZQ9aMyTGFZx9yPBFps2b", artist: "Future", track: "Solo" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmcvh7Hs8YzFTq2LQxpHQG58qge3FfBtHsiUtC29XWMffW", artist: "Future", track: "Type Shit" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSFPbbtgX492xcsJWFMsBDNDqQfiBS5gkYWb416Wejt6q", artist: "Future", track: "Young Metro" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVoeQjqn5tc7Uv3TQVtrc8pB9YAw143PR2Z9K9Y4vHbZ2", artist: "G Herbo", track: "PTSD" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPqeaXcTc4FHpdYDF7nBnAsDkhx8QuR5m5UKFU18J43x7", artist: "GELO", track: "Tweaker" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmceeAWahQY9iNAtXVTp3Nbf8Mduu5H59zTiBsQfsxitJM", artist: "Gael Garcia Bernal", track: "Remember Me (Lullaby)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfYXfv9asbnScqag9EDaJgu6LgLuuhMxEXxSpXo416QCB", artist: "Glass Animals", track: "Heat Waves" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRgRm7qZCzLb9Scne88FHwV3xYxiy9nFaN4n6kGe3vh3C", artist: "Gunna", track: "fukumean" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbJunxJvF6GfEraVxMLnjJv6teCDG5RQpRRNjAeYxfQW2", artist: "Hako", track: "listen!" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPAs8rhZxhp7geYqRVeHdxWNKRb9UqsjnZDDV8yFT9af5", artist: "Halsey", track: "Without Me (2)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmcqamiuw25rfk5CiCnMGg3UDWWeSJVBj3frN726ky78Fs", artist: "Halsey", track: "Without Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVkbqfgW3uhqPJDp4LDjQYxAxH3W6HVSQbrxYtNMFnXYQ", artist: "Harry Styles", track: "Watermelon Sugar" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYRVATNMVidnGAZggb4tjnQcQFKJE4bFx7J7iS2fHGWUy", artist: "Hippie Sabotage", track: "Devil Eyes" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmapSs8UYf1G4xLgHtQq18YphUdMvL4KwrmcG8ZwEQWwvt", artist: "Hotel Ugly", track: "Shut up My Moms Calling (Sped Up)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPc3GgU9cVgXN3E3YGohbyvCKucn5M23nxufMKycv8vGp", artist: "Iann Dior", track: "emotions" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcfaYACyQC8KqGfcXLDf9b7LXwt6p33K8voAYYsW3gDfr", artist: "Iann Dior", track: "gone girl" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRj7GNDQ9xNzsMfaJrpbkmVf9oxgEkAvimm4XzyEWTxUV", artist: "Iann Dior", track: "Sick and Tired" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNymXmeSqEBYgW2S4rBY3JDwM4vBaGLyozw9ZELeNtKrc", artist: "Imagine Dragons", track: "Believer" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVrNLtNnc7EbEfn7jwUoFpNaaQ5rwiYNXBLVjr3CYRMLS", artist: "Imagine Dragons", track: "Bones" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmarEcvxHWtzQ8N9jWPDvd9iUPwXvQbGkBwRywFHh4NQxu", artist: "Imagine Dragons", track: "Demons" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmc6ks8JEsoX3e2gbNA7mKsjfVNxQv3bdnHgv4QSPM9qTa", artist: "Imagine Dragons", track: "It s Time" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma1Napkf8ArGo8hqzNnMBew4stykfL4nAwtaCod1mC1We", artist: "Imagine Dragons", track: "Machine" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeB1EcYkkySaYoR4PRPnuBV7AZ7QC3dWs8n1yAPMtQ9jv", artist: "Imagine Dragons", track: "Monster" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmS8rXwueqWxWADcsjpL6hNNHneZtsN9SdYzUD8KD3k55f", artist: "Imagine Dragons", track: "Natural" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXUExXJZDy9yYsjGAL31hi7NYXFTbhZbxhQ2tpQj6ArCn", artist: "Imagine Dragons", track: "On Top Of The World" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfMVRumqLXwYG284iiAB1HAPiSo7VuzhdRZiLyLGkK2Fi", artist: "Imagine Dragons", track: "Radioactive" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSPpSfE8sbSnJvGnn8rJav6KufkNA2M87D3GdtEMUBZP3", artist: "Imagine Dragons", track: "Rise Up" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYqEiDLvs8L15D3eghYx4SqkTxacCv6zfSHRVTMnv6KEf", artist: "Imagine Dragons", track: "Roots" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTAgdbwhD6JFJPRrtEK7K1oF3hB8GCMjWaRRdMpvaHkox", artist: "Imagine Dragons", track: "Thunder" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbddVKLKQeStqQKd6EYSXmBxji9PLaxp7KW7XyMrWtP3K", artist: "Imagine Dragons", track: "Walking The Wire" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSeUiowFSgFpqxVihmur64ap2H25Z6YDZtBCUwGoWvKKr", artist: "Imagine Dragons", track: "Warriors" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXVasXKYrumUnCvASfm1qjtsrxBBVjuaUt25cm9FUZG4c", artist: "Imagine Dragons", track: "Whatever It Takes" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPA3wMKmduDrBsEEuvjMWSvwSU2thHTcnGPxaaLCTSy9i", artist: "Imagine Dragons", track: "Zero" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPCDzDRhZMhfuin1i7BrHgoTKHhqRM867TxZB1cEK1RbK", artist: "Imran Khan", track: "Satisfya" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXRoMMwwLgw3mHkNLKuvPKkeUXzcYMhzwoSJcWFfEXy2u", artist: "Indila", track: "Tourner Dans Le Vide" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmc1Eo4GEEW6c7PzfxPBGqVpgD6Ez627htBic58mazjUh8", artist: "Internet Money", track: "Blastoff (feat. Juice WRLD)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcCDtfLujR3UcSVXLrh62fzjDxW7BjPQyp4wqxXZuC3R2", artist: "Internet money", track: "JETSKI" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNTYFeZ3YEUy25S3aJDwSLn6dbeaxUZ8x3gE5YvGGh95t", artist: "Internet money", track: "Lemonade (feat. NAV)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTmCUVWBZyDPLzbLgfuSbHwVhRNBskfp4yDHvDprVoQDK", artist: "J. Cole", track: "MIDDLE CHILD" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfFYHz4wkpKnrxRyyLE2mtCvDDZKCUiBVNKwLPrKcTuPv", artist: "J. Cole", track: "No Role Modelz" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVL5RG1BKW6hAgm95aPWZShPopdCkzh8TkkvbAS1fwsyH", artist: "J. Cole", track: "She Knows" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNr1dJbC9W6Kx5q3GsRd9pAs5QvW1U3nbjY8nC1odgmWm", artist: "JID", track: "Surround Sound" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUrsSPQYZc7xF96Le9zCJU59H8NCTwzMEgxWvX4vZYtwM", artist: "Jack Harlow", track: "Whats Poppin" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNtURCiYrZjVqpwy39ZubzJfWPZRAcW7JFdu4nfhtTWJA", artist: "Jackboys", track: "GATTI" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNhGSNHnJcGSvLbEs57rHfBo8QRMFApfVxv3gFaCuRTgN", artist: "Jackboys", track: "OUT WEST (feat. Young Thug)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmf3NmyuM1H9LuJEvjV4TduXCYkJgUzJaEcBW91dhbJPbC", artist: "Joel Corry", track: "Head   Heart (feat. MNEK)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdVg6jP5sQWc3rGiP4o6dy5ucCTbsLeANqH2NZ7Fq1nEr", artist: "Juice WRLD", track: "734" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma7HkCTLhMweP7n9kgY3Cx4fFmcuL7buhTxLGd2VkJmaj", artist: "Juice WRLD", track: "Already Dead" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVUjtRRF3nw9NBQ4ApsChyXTRpwncEz3sHNaZRQhMMPcK", artist: "Juice WRLD", track: "Burn" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPQ2KUMZ5C188Xhru49YvAHoi9amxBaV9mkDNa1hJnsEZ", artist: "Juice WRLD", track: "Cigarettes" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdWnvunFKscrEtyYHketw78NRv1T4jfpeteVzpsFhtne1", artist: "Juice WRLD", track: "Empty" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUs5S4gu8V795GrF6NhMpy7QSFMMuekuqpTQW6gBaLnX6", artist: "Juice WRLD", track: "Face 2 Face" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmdk7dR9z31MAMxGvW5g29JSHiQHDA9dCkAodM91FRxxzX", artist: "Juice WRLD", track: "Feeling" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmR9Ckcq25FRnPh3L1dmLt3wtJnrYHCBvWrre3xRkyrYUe", artist: "Juice WRLD", track: "Hear Me Calling" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYJ4KSQWTyRyr36b1Jyc631EewiX5aEH5VRof5MN2HeSQ", artist: "Juice WRLD", track: "In My Head" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNXd8qc1mqqvVoDD9GRA12LoPUhWNc9uGEcNQJ5saYtQ6", artist: "Juice WRLD", track: "Robbery" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmdggv9USr1A9mPD5kx6KuHP5XBv9vEbJUQD3ENNqSSrJy", artist: "Juice Wrld", track: "Adore You" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaPJymSMjhhpSzuPvR3bWa7pQ9117bXAojSdw7zGS3kjk", artist: "Juice Wrld", track: "All Girls Are The Same" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZEhUPu43HkzsuZ62j7EPQQX1GCWxy2RJDXnR5K7mEkG3", artist: "Juice Wrld", track: "Anxiety (Intro)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZnnP9VdpS893x6WxgqXY7fQp8rsvmDhzNywymbAEVFPC", artist: "Juice Wrld", track: "Armed And Dangerous" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcFGbz687Wd9bmqFVNDzmmwZWk2cCsAaKwj69zP83U6xD", artist: "Juice Wrld", track: "Best Friend" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmW2zAjoPrQCeMo37FW9p6zKbLFUskgviLuWHqDUdCaZwe", artist: "Juice Wrld", track: "Black   White" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSHSxMjqnhNQ27RDSAMmL6P7qKpP874tkZVRXCpE9suZF", artist: "Juice Wrld", track: "Candles" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbyZ4gWAY3mwHpMM5Wkam8WJsB8ayzPYh883mPNvnBteg", artist: "Juice Wrld", track: "Come   Go" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPyvpLvhFdmXseVTqHKM2WFLBuQn8qAKpzfRcp9wVHKjg", artist: "Juice Wrld", track: "Conversations" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXv8NYhiuimrWS6u485nWM1P7egTCt76wt6dABWdmzV4M", artist: "Juice Wrld", track: "Empty Out Your Pockets" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbfZ8LsCFh8w95bEMXYTAGH3eemPv5T5L6Sy9RmTaHJg3", artist: "Juice Wrld", track: "End Of The Road" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmd9n5zt23qoQ6WVeGMdzDygLoMf8V8t2XmMpbetJhNqcB", artist: "Juice Wrld", track: "Flaws And Sins" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeGASRWZQiPHhVVDTuSxjJWFe4wpVpQ5uWfeidjKNt4CU", artist: "Juice Wrld", track: "Get Through It (Interlude)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUCMH8XceBYcP2qorp7dV85nxYoiBeABzoqGSsLqfefgg", artist: "Juice Wrld", track: "Go Hard 2.0" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaeP9W6rFKRtQSjMbs4naBhh3ia61pMWbXPb1gK9mK13N", artist: "Juice Wrld", track: "Hate The Other Side" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdnRBe5edpDRihfZQhmrM791BrENFu1c5stmCMikTSgqP", artist: "Juice Wrld", track: "Hide" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVyDbccAHreUsaS5wGT9sAUarJLBjvpaU6AZGfpPH9JzS", artist: "Juice Wrld", track: "Hurt Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNq1GJUrFRYXxXww1TtdoyCc7gRph5xsWQgLSNSJkQUuR", artist: "Juice Wrld", track: "I ll Be Fine" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYoDYrWEv2SYiyMsgHZ1RKTBV9tDZ6YEHCNeXAMrtmJV9", artist: "Juice Wrld", track: "I m Still" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdkoKb2iawAaPr3UFypQVa9pPjmRdQd8yGMJEtyq4dY1C", artist: "Juice Wrld", track: "KTM Drip" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma1qkSJp6JyHxLCF2BVDZ6gVWuEfVbxn7vHXUT2LrxuwV", artist: "Juice Wrld", track: "Lace It" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSG5S4bUS6nEee76HLUZrfhNtv95FNdVqVhicG4oSfE7L", artist: "Juice Wrld", track: "Lean Wit Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma9ozy9i9ZkbSWHjbmZXRtdvwq8uCHM9jZxDbCbewawxi", artist: "Juice Wrld", track: "Legends" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNSnn26zDQm1jc28Sbs5i9oW6UcQqjpHNVH4XHhzayovN", artist: "Juice Wrld", track: "Let Me Know (I Wonder Why Freestyle)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWQN5FbCiDxmaZcWVZf3xgbGiZCBTqXso3vANqj3hS6Zj", artist: "Juice Wrld", track: "Long Gone" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQC9t5EdWdZuozYo6xWtBWzxHMXkiGo6ArQ9SP8GiziLq", artist: "Juice Wrld", track: "Lucid Dreams" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdLgcmWt5GWaNwpg2rFbkgK5C2FnWyPSL1jzLfLDxW24c", artist: "Juice Wrld", track: "Man Of The Year" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUubm3vjC8B6MEDxpKpCVKKUaFJ2HukqzbrqUV85mtXjA", artist: "Juice Wrld", track: "Misfit" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWZtGCjCX611YoqRAqf9RSuPuY9gyGCaf7uGcEPJiis8Z", artist: "Juice Wrld", track: "Party By Myself" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmY7ZFxjtyjek89UCmx6NmFtvdSZg1y3BMHo3v1row3sVx", artist: "Juice Wrld", track: "Rich And Blind" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZiDxPLzW6AqamDakZYUMAiz5x8B16pmjdRagmiCpnfmw", artist: "Juice Wrld", track: "Righteous" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZ9t7VDcmboK5CdX927FUYLKKn5UGxgQvyyvan5xvKJnt", artist: "Juice Wrld", track: "Smile" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQiCnYfXC2SX54R5ooQCK4rKwBL74rWpgmn5SnxJg7qqE", artist: "Juice Wrld", track: "Stay High" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRK2cKAU6CB53m9nYPRyh7hG2yhiGFQXmRx8Lc5RxbUam", artist: "Juice Wrld", track: "Tell Me U Luv Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZB4zoCjt3hC4iBddTPYx1vgNP2vsyxrGzgJNPQPa4dC5", artist: "Juice Wrld", track: "The Party Never Ends" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYbK9sacyN65udykCrFeovaSrEXMpUpUAi3yF47XfXQfV", artist: "Juice Wrld", track: "Used To" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSVeQ7xhvG5ETJPqFL4XsD1D7YFJDwMmbhF73Ad3nA95y", artist: "Juice Wrld", track: "Wasted" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmW7n3aoc7KjYi29NMHUaZGvtEbgd4YtJfA4e8GQBoomrC", artist: "Juice Wrld", track: "Wishing Well" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWmfZg1LYkX5rFcDL86s6byUpw3eGRwWRmbEbZcZuWvdT", artist: "Juice Wrld", track: "Scared Of Love " },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qma8JWASREAdKoVraRGpRe2m5woVeDD3UdEfmtPGutg4Qb", artist: "Jvla", track: "Such a Whore (Stellular Remix)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmY5wWChbZNz3t2tQDuNwNnUmVbghGYYwpckQpe9bRBiCn", artist: "KIDS SEE GHOSTS", track: "Reborn" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbevxxaqUELiDioyEVF185ZHdGaK7rPJ2sNHHeVtjMRat", artist: "Kanye West", track: "Bad News" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZShYKZGyrSyD36zEJppFuLwhipcTfSrUyJsNXaxLho9g", artist: "Kanye West", track: "Can t Tell Me Nothing" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdQ2vwLPEAa3QfWnCDJm6c1DbebqwzbBXNzMATzfZuxV6", artist: "Kanye West", track: "Flashing Lights" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTNB6eabX5Sjh99uwpP6Jw7MhhjW4ypZNfhyCziBKJLWb", artist: "Kanye West", track: "God Breathed" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRSa9biDiKKooQXNPszJLNVz1iusGRiXfiVtt1DL8tu3i", artist: "Kanye West", track: "Gold Digger" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmazgpg6mVWd14BRDz8ZCiWRbWiiiamFfDtEKtgTwQ6UqJ", artist: "Kanye West", track: "Good Morning" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZEBwYac6yT4gAgsgKMQf862Ryxeqb3NPvA9xs48jA6z8", artist: "Kanye West", track: "Heartless" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWBUkctH5ReTtkDRnSnHDq8uHXvz8pSGHRtyMN9UFm3pv", artist: "Kanye West", track: "Hey Mama" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPCNUW97SncKEBMyDNuNEhtftVDRRref7aT57HWeJWX6k", artist: "Kanye West", track: "Hurricane" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPpL7MpMmBGv6Q75WP7HWWn93zvKCepysgc2m22dT11UA", artist: "Kanye West", track: "I Wonder" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmU3irgYb3w7E7C8BpmVt45dWUtvQaL2pFPnDHrSoh5tWw", artist: "Kanye West", track: "Love Lockdown (Album Version)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNZnSt3oo7BPozvcU4pW9ZuNfAH1vSYTUnVmuKDs1bgVT", artist: "Kanye West", track: "Mercy" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRCxQDk9ppbV9MTdq6ppNPvQexX1TnDE6KaNdrUr8M2tR", artist: "Kanye West", track: "Off The Grid" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmc45UxLBQqQn3cBwdctGinuaMB7KhHd4v6bQ4W4c5rGDM", artist: "Kanye West", track: "POWER" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeyzgewhjztVD3R52PL9dYcbWbbUkcaKYCrmyUwtm3WA3", artist: "Kanye West", track: "Praise God" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQfbVCT9QCq3hMnpiAf6tFaUT7WYszfoyfEcmUWc5qCGX", artist: "Kanye West", track: "Stronger" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmX91DMLXaUbSGqe1arCDZ3L7gmWwkvsWgFtRLcAiykbGp", artist: "Kanye West", track: "True Love" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXDXCghSjYQUonRtweWyYcix1B2vH2VRXueL6413TYQcD", artist: "Kanye West", track: "Waves" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWHvHPbgaPxo2GQSd7xtb3ZHL4sJMwFgDuArthvDUjgkX", artist: "Kendrick Lamar", track: "All The Stars" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcBTL5WSGtpDgfZcCoE5fyXKWUyFbAkd8d9ZN83JZxVYT", artist: "Kendrick Lamar", track: "Alright" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbKFj9r8f7xV7jvdmTaiK558pBE8JfKEmRFtCA6TzE9DC", artist: "Kendrick Lamar", track: "HUMBLE" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQcY4fFELUGSyWBfa4JX4BH9V9xyZniLLGGpQJo1c3EGD", artist: "Kendrick Lamar", track: "Money Trees" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUaMBKPVYBwRFkMBnUNKnwNLmxAkqWmvnjk6sS8KoDuqT", artist: "Kendrick Lamar", track: "N95" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRZ1PgkwnSrDLHQ21oVRC3neiQVkr3MnPe7xz9Tr2rvPt", artist: "Key Glock", track: "Ambition For Cash" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQNeK4JbJYrXvJeHeRATyNamFhkMDYbgCC6CfH32BwzEu", artist: "Kid Cudi", track: "Day  N  Nite (Nightmare)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYsZNEheyGZYZDmPsLk73w38hGauP4gUBKpXyaFtUjRgL", artist: "Kid Cudi", track: "Pursuit Of Happiness (Nightmare)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYXXKgYrhTFb8B3rmSsdccutGDN3fWDBAp9czqWYg6et3", artist: "King Von", track: "Armed   Dangerous" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWXzAEjqVYa8pNxuH5RGEh28N91cfNuyzquN9NK5QYuXh", artist: "King Von", track: "Crazy Story" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeeU3CMCbgGvqEkt1JTaTkhuDb6gF9v6HVmT8jdVFhv6C", artist: "King Von", track: "Gleesh Place" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmduke7aioEGBARG2fMcnKRU1fhHou4Zyp2Cn2oeRT1v91", artist: "King Von", track: "Took Her To The O" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmevE63ZY8sXzNrrKNxLC61ifnENe1WQZ9zZNqZWGVhUa2", artist: "Kodak Black", track: "Roll in Peace (feat. XXXTENTACION) (2)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qme2TRgaEW1D9HGtZMT4MNMSpx1KtmUE9Eq3jcQR9k5AbR", artist: "Kodak Black", track: "Roll in Peace (feat. XXXTENTACION)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVQt86Lqmw8NgzhAQ3AANYqiw8q9fy3CSTBqq2kNwEHPU", artist: "Kodak Black", track: "ZEZE (feat. Travis Scott   Offset)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmS1ehJx6ibs1pgGvzCdqASfnTLqq9xFmPJGri3wde2dcJ", artist: "Labi Siffre", track: "My Song" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTQdz4WfwqSMpCB7J6MyVgWJBzuaCrypQCB29Wac7S7g9", artist: "Lil Baby", track: "Drip Too Hard" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWpkhKk8rwfpwJzHfk9fZsquVK1zRMF99bguWTakVMVXE", artist: "Lil Baby", track: "Pure Cocaine" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQK8AsmtFWuNcYBXvFtE1w6EiwNENtJZjX9wZobKNKB71", artist: "Lil Loaded", track: "6locc 6a6y" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmX4HamfA2d1VZNgqz5o74NXyFjBrjbzUjrLpNGEEaetTS", artist: "Lil Mosey", track: "Blueberry Faygo" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZkuTj3iuoUbEQmpjo9Arh2GdcDCkZ2qtPhjAkx1cs5eT", artist: "Lil Mosey", track: "Noticed" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmbZbXYiM94zpKZCHhjmftFEjQYJ6TAPsGcEM913fCZT55", artist: "Lil Mosey", track: "Stuck In A Dream" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmdhvYho1EK7h8M39vVJU4FutkzHtg4gaZtrP9Nw2TsWnR", artist: "Lil Nas X", track: "Old Town Road (feat. Billy Ray Cyrus) (Remix)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVaVQMKnfzBmGWq3CTEx6usPeskAiRXck1n1XBZA6Xmbm", artist: "Lil Peep", track: "Benz Truck (гелик)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeKk26MNBzrHcDZ83tdn18s69kbzSz7mVfLnRmXqkv3n1", artist: "Lil Peep", track: "Falling Down (Bonus Track)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmT9yVTF2p5xMQNUaSTiBDvZts5EX3Rbdj6bUtvGKdaAu6", artist: "Lil Peep", track: "Life is Beautiful" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaYLPKuuXAdRodG9G3kzs5GHmMh8Kgvp1s4A4qMv8z6Cg", artist: "Lil Peep", track: "Save That Shit" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVe4J4EXKRFck67tu9GaFkuqpsLaPZJq6cPq9rYfvpGFn", artist: "Lil Peep", track: "Star Shopping" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXSyxet6BoCULfQZLZ6GyGBLDGMD1wmqJzY5kuot174qZ", artist: "Lil Peep", track: "beamer boy" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXPzxHupz9aC73jyBeqRu9FE9U2JxHKch4CTLkN8EpKgK", artist: "Lil Peep", track: "hellboy" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVBLT8BhnYebxaGDyCcKhFN77hkWRLVD4YcJ2ohcxLeuD", artist: "Lil Peep", track: "nuts" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZsHKsRQ6RvD8BmnfT481wXgwiys1dd3yJqdufW9G7ydn", artist: "Lil Peep", track: "toxic city" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVRbbmhfWW3MJxQASbEAN59d2VU2yZYPt4UQgSF9etRor", artist: "Lil Peep", track: "white tee" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYgfYz8aBHquDTReGrKgLVW96VUD22YuYiNKJQdrSdLVi", artist: "Lil Skies", track: "Nowadays (feat. Landon Cube)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZfyNe9FQh5oRTiqhNQ7Z2SkcLbXZXfZ9zsaSTNDzoPQy", artist: "Lil Tecca", track: "500lbs" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmXnH6KRnNXiJL76AJMxx1ZvTJ2dmvxioUkH3B1xd3wDSh", artist: "Lil Tecca", track: "Love Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUBeHk2jCrCxfcHHZ8TN3PLdocbvKHpCSuwfHWYXgJ2yg", artist: "Lil Tecca", track: "Never Left" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRQFyKs7Xn5EhWA4yhBLxMDY2kKXb95KqiuVEsK6UEjCA", artist: "Lil Tecca", track: "REPEAT IT" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRFQVED7pF5RCq9pLC2gq9PyJpXQqf3rcfKU1bciGi35g", artist: "Lil Tecca", track: "Ransom" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeXqmc7Fgy8vWUjzqENnm3Cm1AqPxn2nDVV6QmgUXZipB", artist: "Lil Tjay", track: "Calling My Phone" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRqrV7YZ9fvdeGvBbDeN26S2n1UvUuVVBKD4RJbW9JMFR", artist: "Lil Tjay", track: "F.N" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmQTwyX8LXRcKGZGVbc4JSdCD5rbLUZfygroDrPaiFKMnv", artist: "Lil Uzi Vert", track: "20 Min" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfVBR3U3B72d3wxpY13ZG7XdU2ndLp9c6Xr6rCguBfA7E", artist: "Lil Uzi Vert", track: "The Way Life Goes (feat. Oh Wonder)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmbq5TTGVtFfqKg9cYbG6h9gLk8sXZ9uXhCjynjjeShT4g", artist: "Lil Uzi Vert", track: "XO Tour Llif3" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmPLhRW2BYrZ3E231c6Ke6rrmm7esixHwCUET1niKXCfjK", artist: "Lil Wayne", track: "Mirror" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVMUGJaq1iJtn6wTKTFmX8rGnjgM8ZrQ7D67Fp3V152AC", artist: "Lil Xan", track: "Betrayed" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTDeytY3T28Kg1JuaYXdtnsyeNeSj656nqNASmjDVZqiZ", artist: "Lil Wayne", track: "Sucker for Pain" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmSycVCDiZYHLKEoVnWtH38gp8jMngzE8LMa9qeaEZ9Y9s", artist: "Logic", track: "1-800-273-8255" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmeUU6cLUWaqfXoLPj9DkNEdQ44cJhmeedecpXN66tJisA", artist: "Logic", track: "Everyday" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUAjyTdG7w768XAqcfJSBGt3UFEPiPfk5LF8L6hj1H5db", artist: "Logic", track: "Homicide" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWo28vC2N4CcttmkjxGP77BMCxMrJMBNS9Hoh6SiTKGYC", artist: "Logic", track: "Perfect" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmW3baaVTdX5LCyzGzCVgjuAjhDdXqidcrP4txgL2XUTWh", artist: "Ludwig Goransson", track: "TRUCKS IN PLACE" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWUGwG2UWvEsYsSx3eecsLNoxwarWqAgLxpCeBK6kesyJ", artist: "Maluma", track: "Hawái" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRatcj8KeD8tKxqXpLDZmGbeJkr8zDxKU7bDdnNTdfdMt", artist: "Maroon 5", track: "Animals" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcHrUb8BWnoYjQCg63MvYXZT9s3gEyUqr1ZBDSe5UV5zN", artist: "Marshmello", track: "Alone" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmcqdQL3moCgx76TYjDzbeWDrJ32ufvBr78QKhmL8jEHkW", artist: "Marshmello", track: "Bye Bye" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmaMzZL7aphmni3mWQsyXCqRZie7pu32pN51d8bozNPiyz", artist: "Marshmello", track: "FRIENDS" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmNQUVNCQfmm9EjiHn7CEZXiQmg9Cu83EfXkcNZ6PY7rvg", artist: "Masked Wolf", track: "Astronaut In The Ocean" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmdisp1gojgkQB2aeCCg8PD2a3nCwrtykiHD56ZMqG2Yhf", artist: "Meek Mill", track: "Going Bad (feat. Drake)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfLWbLpQ9oJVQpyFkcKeVV2BsiSPN57U86vWmAtNGMZSV", artist: "Melly Mike", track: "Young Black   Rich" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUgRAtGcsqDJojQPZEqV9vXBtnc81MaMvNeRQWXcQRa2t", artist: "Memphis Cult", track: "9mm" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmYnuJH65FrVTMu7fm4KHpWL3ZMafrCgnMmjdRnT2ah7yM", artist: "Metro Boomin", track: "Creepin&#39;" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTJJHmLmwr1SFZhC2yn8d8q5v5CDAfWbTEZXvUYSffS4y", artist: "Metro Boomin", track: "Niagara Falls (Foot or 2)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmRT2PRCjLYJAWVzgEmkVmcjws2KSLo7871wzNBdHupUx1", artist: "Metro Boomin", track: "Overdue" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTvnFHJCnuD3G5Z8vEQ1LYSNheNGT5fie2aq7hf3Fui6W", artist: "Metro Boomin", track: "Raindrops (Insane)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmfMawn7pRGDiGRysqy8Fy4PqMCoMAQjHp6JP8766FKwpb", artist: "Metro Boomin", track: "Space Cadet" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmavcsir6buzHdYebnVkT4DUYAejiq942h6gVAd9oXjpKD", artist: "Metro Boomin", track: "Superhero (Heroes &amp; Villains)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/Qmacp33WoMN6SiEY64PfHx8gyMarV7EscVg3XazxZDdr7v", artist: "Metro Boomin", track: "Too Many Nights" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmVygxuPSmnT1HBXD8398tGmhbJ49MsETgH2UBabtWHGLX", artist: "Michael Jackson", track: "Smooth Criminal (2012 Remaster)" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmUhBHVQSfyEcUnSJrnwkJ8bTVgM7XpTaU76Ea2fmEuqVD", artist: "Miley Cyrus", track: "Midnight Sky" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmZ7YEW5vTx8sGPMfa1oYpaxwYjN9rpN4P162TPbja78wr", artist: "Mxrcedes", track: "KTM Drip" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmT85bTos9sWVbdUtXfydUc6jNQHGzU1p6ivyNfW4Xicvt", artist: "NEFFEX", track: "Best of Me" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmWX72YGcPqbGePgBwcvJuHnFnrutGz3Pq5eB1EmbszYrZ", artist: "NEFFEX", track: "Fight Back" },
+{ link: "https://absolute-scarlet-crow.myfilebase.com/ipfs/QmTjU4VewBTX8Tu8AmRhUbgnPzXGuY62mFZzp36Mg4YFko", artist: "NEFFEX", track: "Grateful" }
+    ];
+
+    let currentIndex = 0;
+    let isPlaying = false;
+    const audio = new Audio();
+
+    const titleEl = document.getElementById('trackTitle');
+    const artistEl = document.getElementById('trackArtist');
+    const playBtn = document.getElementById('playPauseBtn');
+    const progressEl = document.getElementById('progress');
+    const trackListEl = document.getElementById('trackList');
+
+    function loadTrack(index) {
+      const track = tracks[index];
+      audio.src = track.link;
+      titleEl.textContent = track.track;
+      artistEl.textContent = track.artist;
+      currentIndex = index;
+      audio.load();
+    }
+
+    function playTrack() {
+      audio.play();
+      isPlaying = true;
+      playBtn.textContent = '⏸';
+    }
+
+    function pauseTrack() {
+      audio.pause();
+      isPlaying = false;
+      playBtn.textContent = '▶';
+    }
+
+    function togglePlay() {
+      isPlaying ? pauseTrack() : playTrack();
+    }
+
+    function nextTrack() {
+      currentIndex = (currentIndex + 1) % tracks.length;
+      loadTrack(currentIndex);
+      playTrack();
+    }
+
+    function prevTrack() {
+      currentIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+      loadTrack(currentIndex);
+      playTrack();
+    }
+
+    function updateProgress() {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progressEl.style.width = percent + '%';
+    }
+
+    function seekTrack(event) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const percent = (event.clientX - bounds.left) / bounds.width;
+      audio.currentTime = percent * audio.duration;
+    }
+
+    function renderTrackList() {
+      trackListEl.innerHTML = '';
+      tracks.forEach((track, index) => {
+        const div = document.createElement('div');
+        div.className = 'song-item';
+        div.textContent = `${track.artist} - ${track.track}`;
+        div.onclick = () => {
+          loadTrack(index);
+          playTrack();
+        };
+        trackListEl.appendChild(div);
+      });
+    }
+
+    function shuffleTracks() {
+      for (let i = tracks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
+      }
+      renderTrackList();
+    }
+
+    function sortByArtist() {
+      tracks.sort((a, b) => a.artist.localeCompare(b.artist));
+      renderTrackList();
+    }
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', nextTrack);
+
+    renderTrackList();
+    loadTrack(currentIndex);
+  </script>
+</body>
+</html>
